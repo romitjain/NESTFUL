@@ -1,3 +1,5 @@
+import pandas as pd
+from pathlib import Path
 import os, json, argparse, statistics, sys, signal, importlib
 from tqdm import tqdm
 from utils import *
@@ -162,6 +164,9 @@ def calculate_scores(predictions, model_name, executable_func_dir, intents_only=
     win_rate_list = []
 
     num_pred_examples_w_parsing_errors = 0
+    pred_examples_w_parsing_errors = []
+    full_scores = []
+
     for item in tqdm(predictions):
         pred_has_parsing_errors = False
         pred_func_calls, gold_func_calls = [], []
@@ -255,6 +260,9 @@ def calculate_scores(predictions, model_name, executable_func_dir, intents_only=
 
         if pred_has_parsing_errors:
             num_pred_examples_w_parsing_errors += 1
+            pred_examples_w_parsing_errors.append(1)
+        else:
+            pred_examples_w_parsing_errors.append(0)
 
         api_with_args_gold = []
         for f in gold_func_calls:
@@ -288,6 +296,10 @@ def calculate_scores(predictions, model_name, executable_func_dir, intents_only=
             accuracy_combined = 0.0
         if accuracy_combined == 1:
             all_num_times_full_score += 1
+            full_scores.append(1)
+        else:
+            full_scores.append(0)
+
         all_accuracy_combined.append(accuracy_combined)
 
         ## WinRate
@@ -297,6 +309,16 @@ def calculate_scores(predictions, model_name, executable_func_dir, intents_only=
 
     p_intent, r_intent, f1_intent = compute_score_sklearn(gold_output_intent, pred_output_intent)
     p_slot, r_slot, f1_slot = compute_score_sklearn(gold_output_slot, pred_output_slot)
+
+    # For final results DF
+    df_data = {
+        "sample_id": [p["sample_id"] for p in predictions],
+        "pred_examples_w_parsing_errors": pred_examples_w_parsing_errors,
+        "all_accuracy_combined": all_accuracy_combined,
+        "full_scores": full_scores,
+        "win_rate_list": win_rate_list
+    }
+    df = pd.DataFrame.from_dict(df_data)
 
     return {
         "p_intent": "{:.3f}".format(p_intent),
@@ -314,7 +336,7 @@ def calculate_scores(predictions, model_name, executable_func_dir, intents_only=
         'num_errors_parsing_pred_slot': num_errors_parsing_pred_slot,
         'num_errors_parsing_gold_slot': num_errors_parsing_gold_slot,
         'num_pred_examples_w_parsing_errors': num_pred_examples_w_parsing_errors
-    }    
+    }, df
 
 def print_result(result, model):
     print("\n###################################")
@@ -367,5 +389,31 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     data = read_jsonlines(args.result_file_path)
-    result = calculate_scores(data, args.model_name, args.executable_func_dir)
+    result, result_df = calculate_scores(data, args.model_name, args.executable_func_dir)
     print_result(result, args.model_name)
+
+    save_dir = str(Path(args.result_file_path).parent)
+    print(f"Saving results to {save_dir}")
+
+    result_df.to_csv(f"{save_dir}/results.csv", index=False)
+    with open(f"{save_dir}/results.json", "w") as fp:
+        json.dump(result, fp)
+
+    test_ds = read_jsonlines("/cos-checkpoints/romit/data-mixing/data/odm/nestful_test.jsonl")
+    test_ds = pd.DataFrame.from_records(test_ds)
+
+    test_ds = test_ds[["sample_id", "category", "order"]]
+    out = test_ds.merge(result_df, left_on="sample_id", right_on="sample_id")
+
+    cat_results = out.groupby(["category"]).agg(
+        total=("category", "count"),
+        parsing_err=("pred_examples_w_parsing_errors", lambda x: 100*round(x.sum()/len(x), 4)),
+        partial_acc=("all_accuracy_combined", lambda x: 100*round(x.sum()/len(x), 4)),
+        full_acc=("full_scores", lambda x: 100*round(x.sum()/len(x), 4)),
+        win_rate=("win_rate_list", lambda x: 100*round(x.sum()/len(x), 4)),
+    )
+
+    print(cat_results)
+    print(f"Overall: {100*round(sum(out.win_rate_list)/len(out), 4)}")
+
+    cat_results.to_csv(f"{save_dir}/category_results.csv", index=False)

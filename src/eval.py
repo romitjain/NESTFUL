@@ -12,7 +12,12 @@ from vllm.distributed.parallel_state import (
 def eval_code(args):
     print("### Loading Data...")
     
-    data = read_jsonlines(args.dataset)
+    data = read_jsonlines("data_v2/nestful_data.jsonl")
+    test = read_jsonlines(args.dataset)
+    test_sample_ids = [s["sample_id"] for s in test]
+    test_sample_ids = set(test_sample_ids)
+
+    data = [d for d in data if d["sample_id"] in test_sample_ids]
 
     for i in range(len(data)):
         data[i]["tools"] = json.dumps(data[i]["tools"])
@@ -25,8 +30,8 @@ def eval_code(args):
     print("### Loading Model...")
     llm = LLM(
         model=args.model, 
-        tensor_parallel_size=torch.cuda.device_count(), 
-        disable_custom_all_reduce=True
+        # tensor_parallel_size=torch.cuda.device_count(), 
+        # disable_custom_all_reduce=True
     )
         
     sampling_params = SamplingParams(temperature=args.temperature, max_tokens=args.max_tokens)
@@ -49,12 +54,12 @@ def eval_code(args):
         output_list.append(temp)
 
     # unload model from GPU
-    destroy_model_parallel()
-    destroy_distributed_environment()
-    del llm.llm_engine.model_executor
-    del llm
-    gc.collect()
-    torch.cuda.empty_cache()
+    # destroy_model_parallel()
+    # destroy_distributed_environment()
+    # del llm.llm_engine.model_executor
+    # del llm
+    # gc.collect()
+    # torch.cuda.empty_cache()
 
     print("### Saving...")
     save_path = os.path.join(args.save_directory, f"nestful_{args.icl_count}", args.model_name, "output.jsonl")
