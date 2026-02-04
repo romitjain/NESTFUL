@@ -31,6 +31,8 @@ LLAMA_MODELS = [
     "Llama-3.2-90B-Vision-Instruct"
 ]
 
+QWEN_MODELS = ["qwen-2.5-3B-instruct"]
+
 def listit(t):
     return list(map(listit, t)) if isinstance(t, (list, tuple)) else t
 
@@ -186,7 +188,7 @@ def calculate_scores(predictions, model_name, executable_func_dir, intents_only=
             pred_func_calls, gold_func_calls, pred_dict_list, gold_dict_list, num_errors_parsing_pred_intent, pred_has_parsing_errors = parse_ToolAce(item, num_errors_parsing_pred_intent)
         elif model_name in GRANITE_MODELS:
             pred_func_calls, gold_func_calls, pred_dict_list, gold_dict_list, num_errors_parsing_pred_intent, pred_has_parsing_errors = parse_granite_3_output(item, num_errors_parsing_pred_intent)
-        elif model_name in GRANITE_3_1_MODELS:
+        elif model_name in GRANITE_3_1_MODELS + QWEN_MODELS:
             pred_func_calls, gold_func_calls, pred_dict_list, gold_dict_list, num_errors_parsing_pred_intent, pred_has_parsing_errors = parse_granite_3_1_output(item, num_errors_parsing_pred_intent)
         elif model_name in LLAMA_MODELS:
             pred_func_calls, gold_func_calls, pred_dict_list, gold_dict_list, num_errors_parsing_pred_intent, pred_has_parsing_errors = parse_llama_3_output(item, num_errors_parsing_pred_intent)
@@ -385,7 +387,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str)
     parser.add_argument("--result_file_path", type=str)
-    parser.add_argument("--executable_func_dir", type=str)
+    parser.add_argument(
+        "--executable_func_dir",
+        type=str,
+        required=False,
+        default="data_v2/executable_functions",
+    )
     args = parser.parse_args()
 
     data = read_jsonlines(args.result_file_path)
@@ -401,6 +408,7 @@ if __name__ == "__main__":
 
     test_ds = read_jsonlines("/cos-checkpoints/romit/data-mixing/data/odm/nestful_test.jsonl")
     test_ds = pd.DataFrame.from_records(test_ds)
+    test_ds["category"] = test_ds.category.apply(lambda x: "advanced_math" if x == "geometry_problems" else x)
 
     test_ds = test_ds[["sample_id", "category", "order"]]
     out = test_ds.merge(result_df, left_on="sample_id", right_on="sample_id")

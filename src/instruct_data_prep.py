@@ -45,6 +45,8 @@ LLAMA_MODELS = [
     "Llama-3.2-90B-Vision-Instruct"
 ]
 
+QWEN_MODELS = ["qwen-2.5-3B-instruct"]
+
 tokenizer = ''
 def get_granite_tokenizer(BASE_MODEL):
     global tokenizer
@@ -53,6 +55,17 @@ def get_granite_tokenizer(BASE_MODEL):
     else:
         tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
         return tokenizer
+
+def qwen_prompt_input(input, function, icl_str, model):
+    prompts = {"role": "user", "content": input}
+    prompts = [prompts]
+    tokenizer = get_granite_tokenizer(model)
+
+    formatted_prompt = tokenizer.apply_chat_template(
+        prompts, json.loads(function), tokenize=False, add_generation_prompt=True
+    )
+
+    return formatted_prompt
 
 def granite_3_1_prompt_input(input, function, icl_str, model):
     prompts = {
@@ -130,6 +143,10 @@ def get_instruct_data(data, model, model_name, icl_ex_count=3):
             input_prompt = prompt_dict["LLaMa-3.1"].format(FUNCTION_STR=json.dumps(sample['tools']), ICL_EXAMPLES=icl_str, QUERY=sample['input'])
         elif model_name in DEEPSEEK:
             input_prompt = deepseek_prompt_input(sample['input'], sample["tools"], icl_str)
+        elif model_name in QWEN_MODELS:
+            input_prompt = qwen_prompt_input(
+                sample["input"], sample["tools"], icl_str, model
+            )
         else:
             try:
                 input_prompt = prompt_dict[model_name].format(FUNCTION_STR=json.dumps(sample['tools']), ICL_EXAMPLES=icl_str, QUERY=sample['input'])
