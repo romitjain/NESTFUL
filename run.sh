@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -xe
 
-MODEL_PATH="/cos-checkpoints/romit/checkpoints/odm-expts/nestful/model_20250908_193054_odm_sft_200s_bs32_fft/checkpoint_final"
-MODEL_NAME="granite-3.1-8b-instruct"
+MODEL_PATH="/workspace/odm/models/42099169-8369-4b29-a59e-a079a9ca0668/granite-dot-build"
+# MODEL_NAME="granite-3.1-8b-instruct"
+MODEL_NAME="qwen-2.5-3B-instruct"
 SAVE_DIR="results"
 DATASET="/cos-checkpoints/romit/data-mixing/data/odm/nestful_test.jsonl"
-ICL_COUNT=3
+ICL_COUNT=0
 
 RESULT_FILE="$SAVE_DIR/nestful_${ICL_COUNT}/${MODEL_NAME}/output.jsonl"
 
