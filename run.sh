@@ -1,9 +1,22 @@
 #!/usr/bin/env bash
 set -xe
 
-MODEL_PATH="/workspace/odm/models/42099169-8369-4b29-a59e-a079a9ca0668/granite-dot-build"
-# MODEL_NAME="granite-3.1-8b-instruct"
-MODEL_NAME="qwen-2.5-3B-instruct"
+MODEL_PATH="${1:-}"
+if [[ -z "$MODEL_PATH" ]]; then
+	echo "model path not provided"
+	exit 1
+fi
+
+MODEL_TYPE="${2:-}"
+if [[ "$MODEL_TYPE" == "granite" ]]; then
+    MODEL_NAME="granite-3.1-8b-instruct"
+elif [[ "$MODEL_TYPE" == "qwen" ]]; then
+    MODEL_NAME="qwen-2.5-3B-instruct"
+else
+    echo "Invalid MODEL_TYPE: must be 'granite' or 'qwen'"
+    exit 1
+fi
+
 SAVE_DIR="results"
 DATASET="/cos-checkpoints/romit/data-mixing/data/odm/nestful_test.jsonl"
 ICL_COUNT=0

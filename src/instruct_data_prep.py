@@ -64,6 +64,9 @@ def qwen_prompt_input(input, function, icl_str, model):
     formatted_prompt = tokenizer.apply_chat_template(
         prompts, json.loads(function), tokenize=False, add_generation_prompt=True
     )
+    sys_prompt = formatted_prompt[formatted_prompt.find("<|im_start|>system\n"): formatted_prompt.find("<|im_end|>")]
+    nestful_sys_prompt = sys_prompt + '\nDO NOT try to answer the user question, just invoke the tools needed to respond to the user, if any. The output MUST strictly adhere to the following JSON format: <|tool_call|>[{\"name\": \"func_name1\", \"arguments\": {\"argument1\": \"value1\", \"argument2\": \"value2\"}, \"label\": \"$var_1\"}, ... (more tool calls as required)]. Please make sure the parameter type is correct and follow the documentation for parameter format. If no function call is needed, please directly output an empty list.\n' + icl_str
+    formatted_prompt = formatted_prompt.replace(sys_prompt, nestful_sys_prompt)
 
     return formatted_prompt
 
