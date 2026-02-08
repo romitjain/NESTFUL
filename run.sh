@@ -17,7 +17,7 @@ else
     exit 1
 fi
 
-SAVE_DIR="results"
+SAVE_DIR="${3:-results}"
 DATASET="/cos-checkpoints/romit/data-mixing/data/odm/nestful_test.jsonl"
 ICL_COUNT=0
 
