@@ -171,6 +171,45 @@ def parse_granite_3_1_output(item, num_errors_parsing_pred_intent, skip_groundin
         pred_has_parsing_errors = True
     return pred_func_calls, gold_func_calls, pred_dict_list, gold_dict_list, num_errors_parsing_pred_intent, pred_has_parsing_errors 
 
+def parse_qwen_output(item, num_errors_parsing_pred_intent, skip_grounding=False):
+    pred_has_parsing_errors = False
+    pred_func_calls, gold_func_calls = [], []
+    pred_dict_list, gold_dict_list = [], []
+    ## Gold
+    gold_dict_list = json.loads(item['output'])
+    if skip_grounding:
+        gold_func_calls = [json.dumps(func) for func in gold_dict_list]
+    else:
+        gold_func_calls = ground_seq_nested_repsonse(gold_dict_list)
+        gold_func_calls = [json.dumps(func) for func in gold_func_calls]
+
+    ## Pred
+    try:
+        generated_text = item['generated_text']
+        cleaned = generated_text.replace("<|tool_call|>", "").strip()
+
+        try:
+            pred_dict_list = json.loads(cleaned)
+        except Exception:
+            blocks = re.findall(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", cleaned, flags=re.DOTALL)
+            if not blocks:
+                raise ValueError("No JSON list and no <tool_call> blocks found")
+
+            pred_dict_list = []
+            for b in blocks:
+                pred_dict_list.append(json.loads(b))
+
+        if skip_grounding:
+            pred_func_calls = [json.dumps(func) for func in pred_dict_list]
+        else:
+            pred_func_calls = ground_seq_nested_repsonse(pred_dict_list) if 'label' in cleaned else pred_dict_list
+            pred_func_calls = [json.dumps(func) for func in pred_func_calls]
+
+    except:
+        num_errors_parsing_pred_intent += 1
+        pred_has_parsing_errors = True
+    return pred_func_calls, gold_func_calls, pred_dict_list, gold_dict_list, num_errors_parsing_pred_intent, pred_has_parsing_errors
+
 def parse_llama_3_output(item, num_errors_parsing_pred_intent, skip_grounding=False):
     pred_has_parsing_errors = False
     pred_func_calls, gold_func_calls = [], []
