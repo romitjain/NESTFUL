@@ -41,6 +41,7 @@ LLAMA_MODELS = [
     "Llama-3.1-8B-Instruct",
     "llama-3-1-70b-instruct",
     "llama-3-1-405b-instruct-fp8",
+    "llama-3-2-3b-instruct",
     "Llama-3.2-11B-Vision-Instruct",
     "Llama-3.2-90B-Vision-Instruct"
 ]

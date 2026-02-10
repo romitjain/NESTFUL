@@ -12,6 +12,8 @@ if [[ "$MODEL_TYPE" == "granite" ]]; then
     MODEL_NAME="granite-3.1-8b-instruct"
 elif [[ "$MODEL_TYPE" == "qwen" ]]; then
     MODEL_NAME="qwen-2.5-3B-instruct"
+elif [[ "$MODEL_TYPE" == "llama" ]]; then
+    MODEL_NAME="llama-3-2-3b-instruct"
 else
     echo "Invalid MODEL_TYPE: must be 'granite' or 'qwen'"
     exit 1
